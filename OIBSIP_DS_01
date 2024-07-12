@@ -1,0 +1,71 @@
+from sklearn.datasets import load_iris
+import pandas as pd
+
+# Load the iris dataset
+iris = load_iris()
+
+# Create a DataFrame
+data = pd.DataFrame(data=iris.data, columns=iris.feature_names)
+data['species'] = iris.target
+data['species'] = data['species'].map({0: 'setosa', 1: 'versicolor', 2: 'virginica'})
+# Display the first few rows of the dataset
+print(data.head())
+
+# Summary statistics
+print(data.describe())
+
+# Check for missing values
+print(data.isnull().sum())
+from sklearn.model_selection import train_test_split
+
+# Features and target
+X = data.drop('species', axis=1)
+y = data['species']
+
+# Split the dataset
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import accuracy_score, classification_report
+
+# Initialize the model
+model = RandomForestClassifier(n_estimators=100, random_state=42)
+
+# Train the model
+model.fit(X_train, y_train)
+
+# Make predictions
+y_pred = model.predict(X_test)
+
+# Evaluate the model
+accuracy = accuracy_score(y_test, y_pred)
+report = classification_report(y_test, y_pred)
+
+print(f'Accuracy: {accuracy}')
+print(report)
+from sklearn.model_selection import GridSearchCV
+
+# Define parameter grid
+param_grid = {
+    'n_estimators': [50, 100, 200],
+    'max_features': ['auto', 'sqrt', 'log2'],
+    'max_depth': [None, 10, 20, 30]
+}
+
+# Initialize GridSearchCV
+grid_search = GridSearchCV(estimator=model, param_grid=param_grid, cv=5, scoring='accuracy')
+
+# Fit the model
+grid_search.fit(X_train, y_train)
+
+# Best parameters
+best_params = grid_search.best_params_
+print(f'Best Parameters: {best_params}')
+
+# Evaluate the best model
+best_model = grid_search.best_estimator_
+y_pred_best = best_model.predict(X_test)
+accuracy_best = accuracy_score(y_test, y_pred_best)
+report_best = classification_report(y_test, y_pred_best)
+
+print(f'Accuracy with best parameters: {accuracy_best}')
+print(report_best)
