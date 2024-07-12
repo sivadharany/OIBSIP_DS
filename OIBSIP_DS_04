@@ -1,0 +1,116 @@
+import pandas as pd
+
+# Load the dataset (assuming you have a CSV file with 'text' and 'label' columns)
+# Replace 'emails.csv' with the path to your dataset
+data = pd.read_csv('emails.csv')
+
+# Display the first few rows of the dataset
+print(data.head())
+import re
+import string
+
+def preprocess_text(text):
+    # Convert text to lowercase
+    text = text.lower()
+    # Remove email addresses
+    text = re.sub(r'\S*@\S*\s?', '', text)
+    # Remove URLs
+    text = re.sub(r'http\S+|www\S+|https\S+', '', text, flags=re.MULTILINE)
+    # Remove HTML tags
+    text = re.sub(r'<.*?>', '', text)
+    # Remove punctuation
+    text = text.translate(str.maketrans('', '', string.punctuation))
+    # Remove numbers
+    text = re.sub(r'\d+', '', text)
+    # Remove extra spaces
+    text = text.strip()
+    return text
+
+# Apply preprocessing
+data['text'] = data['text'].apply(preprocess_text)
+
+# Display the first few rows after preprocessing
+print(data.head())
+from sklearn.feature_extraction.text import TfidfVectorizer
+
+# Initialize TF-IDF Vectorizer
+vectorizer = TfidfVectorizer(stop_words='english', max_df=0.7)
+
+# Fit and transform the text data
+X = vectorizer.fit_transform(data['text'])
+
+# Labels
+y = data['label']
+from sklearn.model_selection import train_test_split
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+from sklearn.naive_bayes import MultinomialNB
+from sklearn.metrics import accuracy_score, classification_report, confusion_matrix
+
+# Initialize the model
+model = MultinomialNB()
+
+# Train the model
+model.fit(X_train, y_train)
+
+# Make predictions
+y_pred = model.predict(X_test)
+
+# Evaluate the model
+accuracy = accuracy_score(y_test, y_pred)
+report = classification_report(y_test, y_pred)
+conf_matrix = confusion_matrix(y_test, y_pred)
+
+print(f'Accuracy: {accuracy}')
+print(report)
+print('Confusion Matrix:')
+print(conf_matrix)
+from sklearn.model_selection import GridSearchCV
+
+# Define the parameter grid
+param_grid = {
+    'alpha': [0.1, 0.5, 1.0]
+}
+
+# Initialize GridSearchCV
+grid_search = GridSearchCV(estimator=model, param_grid=param_grid, cv=5, scoring='accuracy')
+
+# Fit the model
+grid_search.fit(X_train, y_train)
+
+# Best parameters
+best_params = grid_search.best_params_
+print(f'Best Parameters: {best_params}')
+
+# Evaluate the best model
+best_model = grid_search.best_estimator_
+y_pred_best = best_model.predict(X_test)
+accuracy_best = accuracy_score(y_test, y_pred_best)
+report_best = classification_report(y_test, y_pred_best)
+conf_matrix_best = confusion_matrix(y_test, y_pred_best)
+
+print(f'Accuracy with best parameters: {accuracy_best}')
+print(report_best)
+print('Confusion Matrix with best parameters:')
+print(conf_matrix_best)
+import joblib
+
+# Save the model
+joblib.dump(best_model, 'spam_detector_model.pkl')
+
+# Save the vectorizer
+joblib.dump(vectorizer, 'tfidf_vectorizer.pkl')
+# Load the model and vectorizer
+loaded_model = joblib.load('spam_detector_model.pkl')
+loaded_vectorizer = joblib.load('tfidf_vectorizer.pkl')
+
+# Function to predict if an email is spam or not
+def predict_spam(email_text):
+    email_text = preprocess_text(email_text)
+    features = loaded_vectorizer.transform([email_text])
+    prediction = loaded_model.predict(features)
+    return 'spam' if prediction[0] == 1 else 'not spam'
+
+# Test the function
+email = "Congratulations! You've won a $1,000 Walmart gift card. Go to http://bit.ly/123456 to claim now."
+print(predict_spam(email))
