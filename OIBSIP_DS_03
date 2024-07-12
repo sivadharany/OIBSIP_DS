@@ -1,0 +1,127 @@
+import pandas as pd
+
+# Load the dataset
+# Replace 'car_data.csv' with the path to your dataset
+data = pd.read_csv('car_data.csv')
+
+# Display the first few rows of the dataset
+print(data.head())
+# Check for missing values
+print(data.isnull().sum())
+
+# Fill or drop missing values
+data = data.dropna()  # or data.fillna(method='ffill')
+
+# Encode categorical variables
+# For example, if 'brand' is a categorical variable
+data = pd.get_dummies(data, columns=['brand', 'model', 'fuel_type', 'transmission'], drop_first=True)
+
+# Display summary statistics
+print(data.describe())
+import matplotlib.pyplot as plt
+import seaborn as sns
+
+# Plot the distribution of car prices
+plt.figure(figsize=(10, 6))
+sns.histplot(data['price'], bins=30, kde=True)
+plt.title('Distribution of Car Prices')
+plt.xlabel('Price')
+plt.ylabel('Frequency')
+plt.show()
+
+# Plot relationships between features and price
+plt.figure(figsize=(10, 6))
+sns.scatterplot(x=data['horsepower'], y=data['price'])
+plt.title('Horsepower vs Price')
+plt.xlabel('Horsepower')
+plt.ylabel('Price')
+plt.show()
+
+plt.figure(figsize=(10, 6))
+sns.scatterplot(x=data['mileage'], y=data['price'])
+plt.title('Mileage vs Price')
+plt.xlabel('Mileage')
+plt.ylabel('Price')
+plt.show()
+
+# Plot correlation matrix
+plt.figure(figsize=(12, 10))
+correlation_matrix = data.corr()
+sns.heatmap(correlation_matrix, annot=True, cmap='coolwarm')
+plt.title('Correlation Matrix')
+plt.show()
+# Selecting features and target variable
+X = data.drop('price', axis=1)
+y = data['price']
+
+# Feature importance using a simple model like RandomForest
+from sklearn.ensemble import RandomForestRegressor
+model = RandomForestRegressor()
+model.fit(X, y)
+
+# Get feature importances
+importances = model.feature_importances_
+feature_importance = pd.Series(importances, index=X.columns)
+feature_importance = feature_importance.sort_values(ascending=False)
+
+print(feature_importance)
+
+# Select the top features (you can set a threshold or a specific number)
+top_features = feature_importance[feature_importance > 0.01].index
+X = X[top_features]
+from sklearn.model_selection import train_test_split
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+from sklearn.ensemble import RandomForestRegressor
+from sklearn.metrics import mean_absolute_error, mean_squared_error, r2_score
+
+# Initialize the model
+model = RandomForestRegressor(n_estimators=100, random_state=42)
+
+# Train the model
+model.fit(X_train, y_train)
+
+# Make predictions
+y_pred = model.predict(X_test)
+
+# Evaluate the model
+mae = mean_absolute_error(y_test, y_pred)
+mse = mean_squared_error(y_test, y_pred)
+rmse = mean_squared_error(y_test, y_pred, squared=False)
+r2 = r2_score(y_test, y_pred)
+
+print(f'Mean Absolute Error: {mae}')
+print(f'Mean Squared Error: {mse}')
+print(f'Root Mean Squared Error: {rmse}')
+print(f'R-squared: {r2}')
+from sklearn.model_selection import GridSearchCV
+
+# Define the parameter grid
+param_grid = {
+    'n_estimators': [50, 100, 200],
+    'max_features': ['auto', 'sqrt', 'log2'],
+    'max_depth': [None, 10, 20, 30]
+}
+
+# Initialize GridSearchCV
+grid_search = GridSearchCV(estimator=model, param_grid=param_grid, cv=5, scoring='neg_mean_squared_error')
+
+# Fit the model
+grid_search.fit(X_train, y_train)
+
+# Best parameters
+best_params = grid_search.best_params_
+print(f'Best Parameters: {best_params}')
+
+# Evaluate the best model
+best_model = grid_search.best_estimator_
+y_pred_best = best_model.predict(X_test)
+mae_best = mean_absolute_error(y_test, y_pred_best)
+mse_best = mean_squared_error(y_test, y_pred_best)
+rmse_best = mean_squared_error(y_test, y_pred_best, squared=False)
+r2_best = r2_score(y_test, y_pred_best)
+
+print(f'Mean Absolute Error with best parameters: {mae_best}')
+print(f'Mean Squared Error with best parameters: {mse_best}')
+print(f'Root Mean Squared Error with best parameters: {rmse_best}')
+print(f'R-squared with best parameters: {r2_best}')
